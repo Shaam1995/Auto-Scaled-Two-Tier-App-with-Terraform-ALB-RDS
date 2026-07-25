@@ -1,26 +1,39 @@
 pipeline {
     agent any
 
-    environment {
-        APP_SERVER = "ubuntu@172.31.1.176"
-    }
-
     stages {
+
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Shaam1995/Auto-Scaled-Two-Tier-App-with-Terraform-ALB-RDS.git'
+                git branch: 'main',
+                    url: 'https://github.com/Shaam1995/Auto-Scaled-Two-Tier-App-with-Terraform-ALB-RDS.git'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy HTML') {
             steps {
-                sshagent(credentials: ['app-server-ssh']) {
+                sshagent(['ubuntu']) {
+
                     sh '''
-                        scp -o StrictHostKeyChecking=no index.html ${APP_SERVER}:/tmp/index.html
-                        ssh -o StrictHostKeyChecking=no ${APP_SERVER} "sudo mv /tmp/index.html /var/www/html/index.html"
+                    echo "Copying HTML file..."
+
+                    scp -o StrictHostKeyChecking=no \
+                    index.html \
+                    ubuntu@172.31.11.132:/tmp/
+
+                    echo "Deploying..."
+
+                    ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.132 << EOF
+
+                    sudo mv /tmp/index.html /var/www/html/index.html
+
+                    sudo systemctl restart apache2
+
+                    EOF
                     '''
                 }
             }
         }
+
     }
 }
