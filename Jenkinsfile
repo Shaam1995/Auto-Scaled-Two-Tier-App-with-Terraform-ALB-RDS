@@ -12,7 +12,7 @@ pipeline {
 
         stage('Deploy HTML') {
             steps {
-                sshagent(['ubuntu']) {
+                sshagent(['jenkins']) {
 
                     sh '''
                     echo "Copying HTML file..."
