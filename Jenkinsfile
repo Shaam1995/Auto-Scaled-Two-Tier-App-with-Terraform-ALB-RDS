@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        APP_SERVER = "172.31.8.123"
+        APP_SERVER = "172.31.2.241"
         APP_USER   = "ubuntu"
         SSH_CRED   = "git-ssh"
     }
