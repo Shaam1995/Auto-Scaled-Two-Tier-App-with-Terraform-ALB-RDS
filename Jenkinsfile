@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        APP_SERVER = "172.31.11.132"
+        APP_SERVER = "172.31.8.123"
         APP_USER   = "ubuntu"
-        SSH_CRED   = "git-ssh"        // Your Jenkins SSH Credential ID
+        SSH_CRED   = "git-ssh"
     }
 
     stages {
@@ -16,34 +16,30 @@ pipeline {
             }
         }
 
-        stage('Deploy Flask App') {
+        stage('Deploy HTML') {
             steps {
                 sshagent(credentials: [env.SSH_CRED]) {
                     sh '''
-                    echo "Copying Flask application..."
+                    echo "Workspace Files"
+                    ls -la
 
-                    scp -r -o StrictHostKeyChecking=no \
-                    flask-app \
-                    ${APP_USER}@${APP_SERVER}:/home/${APP_USER}/
+                    echo "Copying index.html"
 
-                    echo "Deploying Flask application..."
+                    scp -o StrictHostKeyChecking=no \
+                    index.html \
+                    ${APP_USER}@${APP_SERVER}:/tmp/
 
-                    ssh -o StrictHostKeyChecking=no ${APP_USER}@${APP_SERVER} << EOF
+                    ssh -o StrictHostKeyChecking=no \
+                    ${APP_USER}@${APP_SERVER} << EOF
 
-                    cd /home/${APP_USER}/flask-app
+                    sudo mv /tmp/index.html /var/www/html/index.html
+                    sudo chown www-data:www-data /var/www/html/index.html
+                    sudo chmod 644 /var/www/html/index.html
+                    sudo systemctl restart apache2
 
-                    python3 -m venv venv || true
+                    EOF
 
-                    . venv/bin/activate
-
-                    pip install -r requirements.txt
-
-                    pkill -f app.py || true
-
-                    nohup python3 app.py > app.log 2>&1 &
-
-                    exit
-EOF
+                    echo "Deployment Successful"
                     '''
                 }
             }
@@ -52,11 +48,11 @@ EOF
 
     post {
         success {
-            echo 'Deployment Successful'
+            echo 'HTML Deployment Successful'
         }
 
         failure {
-            echo 'Deployment Failed'
+            echo 'HTML Deployment Failed'
         }
     }
 }
