@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    environment {
+        APP_SERVER = "172.31.11.132"
+        APP_USER   = "ubuntu"
+        SSH_CRED   = "jenkins"      // Jenkins SSH credential ID
+    }
+
     stages {
 
         stage('Checkout') {
@@ -12,28 +18,45 @@ pipeline {
 
         stage('Deploy HTML') {
             steps {
-                sshagent(['jenkins']) {
+                sshagent(credentials: [env.SSH_CRED]) {
 
                     sh '''
-                    echo "Copying HTML file..."
+                    echo "Checking project files..."
+                    ls -la
+
+                    echo "Copying index.html to EC2..."
 
                     scp -o StrictHostKeyChecking=no \
                     index.html \
-                    ubuntu@172.31.11.132:/tmp/
+                    ${APP_USER}@${APP_SERVER}:/tmp/
 
-                    echo "Deploying..."
+                    echo "Deploying application..."
 
-                    ssh -o StrictHostKeyChecking=no ubuntu@172.31.11.132 << EOF
+                    ssh -o StrictHostKeyChecking=no \
+                    ${APP_USER}@${APP_SERVER} << EOF
 
                     sudo mv /tmp/index.html /var/www/html/index.html
-
+                    sudo chown www-data:www-data /var/www/html/index.html
+                    sudo chmod 644 /var/www/html/index.html
                     sudo systemctl restart apache2
 
                     EOF
+
+                    echo "Deployment Successful"
                     '''
                 }
             }
         }
+    }
 
+    post {
+
+        success {
+            echo "Deployment completed successfully."
+        }
+
+        failure {
+            echo "Deployment failed."
+        }
     }
 }
