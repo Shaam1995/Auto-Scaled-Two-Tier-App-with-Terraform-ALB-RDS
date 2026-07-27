@@ -4,7 +4,7 @@ pipeline {
     environment {
         APP_SERVER = "172.31.11.132"
         APP_USER   = "ubuntu"
-        SSH_CRED   = "jenkins"      // Jenkins SSH credential ID
+        SSH_CRED   = "git-ssh"      // Jenkins SSH credential ID
     }
 
     stages {
