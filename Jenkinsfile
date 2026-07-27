@@ -4,7 +4,7 @@ pipeline {
     environment {
         APP_SERVER = "172.31.11.132"
         APP_USER   = "ubuntu"
-        SSH_CRED   = "git-ssh"      // Jenkins SSH credential ID
+        SSH_CRED   = "git-ssh"        // Your Jenkins SSH Credential ID
     }
 
     stages {
@@ -16,33 +16,34 @@ pipeline {
             }
         }
 
-        stage('Deploy HTML') {
+        stage('Deploy Flask App') {
             steps {
                 sshagent(credentials: [env.SSH_CRED]) {
-
                     sh '''
-                    echo "Checking project files..."
-                    ls -la
+                    echo "Copying Flask application..."
 
-                    echo "Copying index.html to EC2..."
+                    scp -r -o StrictHostKeyChecking=no \
+                    flask-app \
+                    ${APP_USER}@${APP_SERVER}:/home/${APP_USER}/
 
-                    scp -o StrictHostKeyChecking=no \
-                    index.html \
-                    ${APP_USER}@${APP_SERVER}:/tmp/
+                    echo "Deploying Flask application..."
 
-                    echo "Deploying application..."
+                    ssh -o StrictHostKeyChecking=no ${APP_USER}@${APP_SERVER} << EOF
 
-                    ssh -o StrictHostKeyChecking=no \
-                    ${APP_USER}@${APP_SERVER} << EOF
+                    cd /home/${APP_USER}/flask-app
 
-                    sudo mv /tmp/index.html /var/www/html/index.html
-                    sudo chown www-data:www-data /var/www/html/index.html
-                    sudo chmod 644 /var/www/html/index.html
-                    sudo systemctl restart apache2
+                    python3 -m venv venv || true
 
-                    EOF
+                    . venv/bin/activate
 
-                    echo "Deployment Successful"
+                    pip install -r requirements.txt
+
+                    pkill -f app.py || true
+
+                    nohup python3 app.py > app.log 2>&1 &
+
+                    exit
+EOF
                     '''
                 }
             }
@@ -50,13 +51,12 @@ pipeline {
     }
 
     post {
-
         success {
-            echo "Deployment completed successfully."
+            echo 'Deployment Successful'
         }
 
         failure {
-            echo "Deployment failed."
+            echo 'Deployment Failed'
         }
     }
 }
